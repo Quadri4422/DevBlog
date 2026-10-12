@@ -1,0 +1,436 @@
+{% extends 'shared/layout.html' %}
+{% load static %}
+
+{% block title %}
+{{ post.title }} - DevBlog
+{% endblock title %}
+
+{% block content %}
+<article class="max-w-4xl mx-auto bg-white p-5 sm:p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200 select-none">
+    <!-- Article Header -->
+    <header class="mb-6 sm:mb-8">
+        <div class="flex items-center space-x-2 mb-3 flex-wrap gap-y-1">
+            {% if post.category %}
+                <span class="px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-md">
+                    {{ post.category.name }}
+                </span>
+                <span class="text-xs text-slate-400">&bull;</span>
+            {% endif %}
+            <span class="text-xs text-slate-500">{{ post.created_at|date:"F d, Y" }}</span>
+            <span class="text-xs text-slate-400">&bull;</span>
+            
+            <!-- Reading Time Badge -->
+            <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{% if post.get_read_time %}{{ post.get_read_time }}{% else %}3{% endif %} min read</span>
+            </span>
+        </div>
+
+        <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight mb-4 select-text">
+            {{ post.title }}
+        </h1>
+        
+        <!-- Author Info & Interaction Controls -->
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 flex-wrap gap-3">
+            <div class="flex items-center space-x-3 select-text">
+                {% if post.author.profile.avatar %}
+                    <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }}" class="w-10 h-10 rounded-full object-cover border border-slate-200">
+                {% else %}
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                        {{ post.author.username|first|upper }}
+                    </div>
+                {% endif %}
+                <div>
+                    <span class="block text-sm font-semibold text-slate-900">{{ post.author.username }}</span>
+                    <span class="block text-xs text-slate-500">Author</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Reaction & Bookmark Controls -->
+                <div class="flex items-center space-x-2">
+                    
+                    <!-- Reaction Picker Container -->
+                    <div id="reaction-container" class="relative inline-block select-none" onmouseenter="togglePopover(true)" onmouseleave="togglePopover(false)">
+                        <!-- Reaction Popover Bar -->
+                        <div id="reaction-popover" class="hidden absolute bottom-full left-0 mb-2 flex items-center space-x-1 bg-white border border-slate-200 p-1.5 rounded-full shadow-lg z-30 transition-all duration-200 transform scale-95 opacity-0">
+                            <button type="button" onclick="submitReaction('like')" title="Like" class="p-2 hover:bg-slate-100 rounded-full text-lg hover:scale-125 transition duration-150 cursor-pointer touch-manipulation">👍</button>
+                            <button type="button" onclick="submitReaction('love')" title="Love" class="p-2 hover:bg-slate-100 rounded-full text-lg hover:scale-125 transition duration-150 cursor-pointer touch-manipulation">❤️</button>
+                            <button type="button" onclick="submitReaction('celebrate')" title="Celebrate" class="p-2 hover:bg-slate-100 rounded-full text-lg hover:scale-125 transition duration-150 cursor-pointer touch-manipulation">🎉</button>
+                            <button type="button" onclick="submitReaction('fire')" title="Fire" class="p-2 hover:bg-slate-100 rounded-full text-lg hover:scale-125 transition duration-150 cursor-pointer touch-manipulation">🔥</button>
+                            <button type="button" onclick="submitReaction('mindblown')" title="Mindblown" class="p-2 hover:bg-slate-100 rounded-full text-lg hover:scale-125 transition duration-150 cursor-pointer touch-manipulation">🤯</button>
+                        </div>
+
+                        <!-- Main Reaction Button -->
+                        <button type="button" 
+                                id="reaction-btn"
+                                onclick="handleMainReactionClick()"
+                                data-post-id="{{ post.id }}"
+                                data-liked="{% if user_reaction %}true{% else %}false{% endif %}"
+                                data-user-reaction="{{ user_reaction|default:'like' }}"
+                                aria-label="React to post"
+                                class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer touch-manipulation [-webkit-tap-highlight-color:transparent] {% if user_reaction %}border-rose-200 bg-rose-50 text-rose-600{% else %}border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100{% endif %}">
+                            <span id="reaction-active-emoji">
+                                {% if user_reaction == 'love' %}❤️
+                                {% elif user_reaction == 'celebrate' %}🎉
+                                {% elif user_reaction == 'fire' %}🔥
+                                {% elif user_reaction == 'mindblown' %}🤯
+                                {% else %}
+                                    <svg id="like-icon" class="w-4 h-4 transition-transform duration-150 {% if user_reaction %}fill-rose-500 text-rose-500{% else %}fill-none stroke-currentColor{% endif %}" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                    </svg>
+                                {% endif %}
+                            </span>
+                            <span id="like-count">{{ post.likes.count|default:0 }}</span>
+                        </button>
+                    </div>
+
+                    <!-- Bookmark Button -->
+                    <button type="button" 
+                            id="bookmark-btn"
+                            onclick="handleBookmarkToggle()"
+                            data-post-id="{{ post.id }}"
+                            data-bookmarked="{% if is_bookmarked %}true{% else %}false{% endif %}"
+                            aria-label="Save post"
+                            class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer touch-manipulation [-webkit-tap-highlight-color:transparent] {% if is_bookmarked %}border-indigo-200 bg-indigo-50 text-indigo-600{% else %}border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100{% endif %}">
+                        <svg id="bookmark-icon" class="w-4 h-4 transition-transform duration-150 {% if is_bookmarked %}fill-indigo-600 text-indigo-600{% else %}fill-none stroke-currentColor{% endif %}" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                        <span id="bookmark-text">{% if is_bookmarked %}Saved{% else %}Save{% endif %}</span>
+                    </button>
+                </div>
+
+                <!-- Post Actions (Edit/Delete for Author/Staff) -->
+                {% if user == post.author or user.is_staff %}
+                    <div class="flex items-center space-x-2 text-xs border-l border-slate-200 pl-3">
+                        <a href="{% url 'post_edit' post.slug %}" class="px-3 py-1.5 text-slate-600 hover:text-indigo-600 bg-slate-100 hover:bg-indigo-50 font-medium rounded-lg transition">Edit Post</a>
+                        <a href="{% url 'post_delete' post.slug %}" class="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 font-medium rounded-lg transition">Delete</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Featured Image -->
+    {% if post.featured_image %}
+        <div class="mb-8 overflow-hidden rounded-xl border border-slate-100 shadow-sm">
+            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="w-full h-64 sm:h-96 object-cover">
+        </div>
+    {% endif %}
+
+    <!-- Post Content -->
+    <div class="prose max-w-none text-slate-800 leading-relaxed text-base sm:text-lg mb-10 select-text">
+        {{ post.content|linebreaks }}
+    </div>
+
+    <hr class="my-8 sm:my-10 border-slate-200">
+
+    <!-- Discussion Section -->
+    <section id="comments" class="select-text">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl sm:text-2xl font-bold text-slate-900">
+                Discussion ({{ comments|length }})
+            </h3>
+        </div>
+
+        <!-- Main Comment Form -->
+        {% if user.is_authenticated %}
+            <form method="POST" action="{% url 'add_comment' post.id %}" class="mb-8 space-y-3">
+                {% csrf_token %}
+                <textarea name="content" rows="3" required placeholder="Write a comment..." 
+                          class="w-full rounded-xl border-slate-300 border p-3.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition shadow-sm"></textarea>
+                <div class="flex justify-end">
+                    <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition shadow-sm">
+                        Post Comment
+                    </button>
+                </div>
+            </form>
+        {% else %}
+            <div class="text-sm text-slate-600 bg-slate-50 border border-slate-200 p-4 rounded-xl mb-8 flex items-center justify-between flex-wrap gap-2">
+                <span>Sign in to join the conversation and leave a reply.</span>
+                <a href="{% url 'login' %}?next={{ request.path }}" class="px-4 py-2 bg-indigo-600 text-white font-medium text-xs rounded-lg hover:bg-indigo-500 transition">Log In</a>
+            </div>
+        {% endif %}
+
+        <!-- Comments List -->
+        <div class="space-y-6">
+            {% for comment in comments %}
+                {% if not comment.parent %}
+                <div class="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200/80 space-y-3" id="comment-{{ comment.id }}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center space-x-3">
+                            {% if comment.author.profile.avatar %}
+                                <img src="{{ comment.author.profile.avatar.url }}" alt="{{ comment.author.username }}" class="w-8 h-8 rounded-full object-cover">
+                            {% else %}
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                                    {{ comment.author.username|first|upper }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="flex items-center space-x-2 flex-wrap">
+                                    <span class="font-bold text-slate-900 text-sm">{{ comment.author.username }}</span>
+                                    {% if comment.author == post.author %}
+                                        <span class="px-2 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 rounded-full">Author</span>
+                                    {% endif %}
+                                </div>
+                                <span class="text-xs text-slate-400 block sm:inline">{{ comment.created_at|timesince }} ago</span>
+                            </div>
+                        </div>
+
+                        {% if user.is_authenticated %}
+                            {% if user == comment.author or user == post.author or user.is_staff %}
+                                <div class="flex items-center space-x-2 shrink-0 text-xs">
+                                    {% if user == comment.author %}
+                                        <a href="{% url 'edit_comment' comment.id %}" class="text-slate-500 hover:text-indigo-600 font-medium px-2 py-1 rounded hover:bg-white transition">Edit</a>
+                                    {% endif %}
+                                    <a href="{% url 'delete_comment' comment.id %}" class="text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition" onclick="return confirm('Are you sure you want to delete this comment?');">Delete</a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    <p class="text-slate-700 text-sm leading-relaxed sm:pl-11">{{ comment.content }}</p>
+
+                    {% if user.is_authenticated %}
+                        <div class="sm:pl-11 pt-1">
+                            <button type="button" onclick="toggleReplyForm('reply-form-{{ comment.id }}')" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1 select-none">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                Reply
+                            </button>
+                        </div>
+                    {% endif %}
+
+                    <div class="sm:ml-11 border-l-2 border-slate-200 pl-3 sm:pl-4 space-y-3 pt-2">
+                        {% for reply in comment.replies.all %}
+                            <div class="bg-white p-3 rounded-lg border border-slate-200/70 space-y-2" id="comment-{{ reply.id }}">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-semibold text-slate-900 text-xs">{{ reply.author.username }}</span>
+                                        {% if reply.author == post.author %}
+                                            <span class="px-1.5 py-0.5 text-[9px] font-semibold bg-indigo-100 text-indigo-700 rounded">Author</span>
+                                        {% endif %}
+                                        <span class="text-xs text-slate-400">&bull; {{ reply.created_at|timesince }} ago</span>
+                                    </div>
+
+                                    {% if user.is_authenticated %}
+                                        {% if user == reply.author or user == post.author or user.is_staff %}
+                                            <div class="flex items-center space-x-2 text-[11px]">
+                                                {% if user == reply.author %}
+                                                    <a href="{% url 'edit_comment' reply.id %}" class="text-slate-500 hover:text-indigo-600 font-medium">Edit</a>
+                                                {% endif %}
+                                                <a href="{% url 'delete_comment' reply.id %}" class="text-red-500 hover:text-red-700 font-medium" onclick="return confirm('Delete reply?');">Delete</a>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                <p class="text-slate-700 text-xs leading-normal">{{ reply.content }}</p>
+                            </div>
+                        {% endfor %}
+
+                        {% if user.is_authenticated %}
+                            <form id="reply-form-{{ comment.id }}" method="POST" action="{% url 'add_comment' post.id %}" class="hidden pt-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                <div class="flex flex-col sm:flex-row gap-2">
+                                    <input type="text" name="content" required placeholder="Reply to {{ comment.author.username }}..." 
+                                           class="w-full text-xs rounded-lg border-slate-300 border p-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-sm">
+                                    <button type="submit" class="w-full sm:w-auto text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition shrink-0">
+                                        Submit
+                                    </button>
+                                </div>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            {% empty %}
+                <div class="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <p class="text-slate-500 text-sm">No comments yet. Be the first to start the conversation!</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+</article>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    const IS_AUTHENTICATED = "{{ user.is_authenticated|yesno:'true,false' }}" === "true";
+    const LOGIN_URL = "{% url 'login' %}?next={{ request.path|urlencode }}";
+
+    function getCSRFToken() {
+        const cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+        return cookie ? decodeURIComponent(cookie.split('=')[1]) : '';
+    }
+
+    function triggerHaptic() {
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(40);
+        }
+    }
+
+    function toggleReplyForm(formId) {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.classList.toggle('hidden');
+            if (!form.classList.contains('hidden')) {
+                const input = form.querySelector('input[name="content"]');
+                if (input) input.focus();
+            }
+        }
+    }
+
+    // Reaction Popover Control
+    let popoverTimeout;
+    function togglePopover(show) {
+        const popover = document.getElementById('reaction-popover');
+        clearTimeout(popoverTimeout);
+        if (show) {
+            popover.classList.remove('hidden');
+            setTimeout(() => {
+                popover.classList.remove('scale-95', 'opacity-0');
+                popover.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        } else {
+            popover.classList.remove('scale-100', 'opacity-100');
+            popover.classList.add('scale-95', 'opacity-0');
+            popoverTimeout = setTimeout(() => popover.classList.add('hidden'), 200);
+        }
+    }
+
+    const emojiMap = {
+        'like': `<svg class="w-4 h-4 fill-rose-500 text-rose-500" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>`,
+        'love': '❤️',
+        'celebrate': '🎉',
+        'fire': '🔥',
+        'mindblown': '🤯'
+    };
+    const defaultSvg = `<svg id="like-icon" class="w-4 h-4 fill-none stroke-currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>`;
+
+    function handleMainReactionClick() {
+        const reactionBtn = document.getElementById('reaction-btn');
+        const currentReaction = reactionBtn.dataset.userReaction || 'like';
+        submitReaction(currentReaction);
+    }
+
+    async function submitReaction(targetReaction) {
+        if (!IS_AUTHENTICATED) {
+            window.location.href = LOGIN_URL;
+            return;
+        }
+
+        triggerHaptic();
+        togglePopover(false);
+
+        const reactionBtn = document.getElementById('reaction-btn');
+        const likeCountEl = document.getElementById('like-count');
+        const reactionActiveEmoji = document.getElementById('reaction-active-emoji');
+
+        const postId = reactionBtn.dataset.postId;
+        const isLiked = reactionBtn.dataset.liked === 'true';
+        const currentReaction = reactionBtn.dataset.userReaction;
+        const currentCount = parseInt(likeCountEl.textContent, 10) || 0;
+
+        let newLikedState = true;
+        let newReaction = targetReaction;
+        let newCount = currentCount;
+
+        if (isLiked && currentReaction === targetReaction) {
+            newLikedState = false;
+            newReaction = '';
+            newCount = Math.max(0, currentCount - 1);
+        } else if (!isLiked) {
+            newCount = currentCount + 1;
+        }
+
+        // Optimistic UI Update
+        reactionBtn.dataset.liked = newLikedState.toString();
+        reactionBtn.dataset.userReaction = newReaction;
+        likeCountEl.textContent = newCount;
+        reactionActiveEmoji.innerHTML = newLikedState ? (emojiMap[newReaction] || emojiMap['like']) : defaultSvg;
+        reactionBtn.className = newLikedState 
+            ? "inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer touch-manipulation border-rose-200 bg-rose-50 text-rose-600"
+            : "inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer touch-manipulation border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100";
+
+        try {
+            const response = await fetch(`/post/${postId}/react/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reaction: targetReaction })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.total_likes !== undefined) likeCountEl.textContent = data.total_likes;
+                if (data.is_liked !== undefined) reactionBtn.dataset.liked = data.is_liked.toString();
+            } else {
+                throw new Error('Server request failed');
+            }
+        } catch (error) {
+            // Rollback on Failure
+            reactionBtn.dataset.liked = isLiked.toString();
+            reactionBtn.dataset.userReaction = currentReaction;
+            likeCountEl.textContent = currentCount;
+            reactionActiveEmoji.innerHTML = isLiked ? (emojiMap[currentReaction] || emojiMap['like']) : defaultSvg;
+            console.error('Reaction submission failed:', error);
+        }
+    }
+
+    async function handleBookmarkToggle() {
+        if (!IS_AUTHENTICATED) {
+            window.location.href = LOGIN_URL;
+            return;
+        }
+
+        const bookmarkBtn = document.getElementById('bookmark-btn');
+        const bookmarkIcon = document.getElementById('bookmark-icon');
+        const bookmarkTextEl = document.getElementById('bookmark-text');
+
+        const postId = bookmarkBtn.dataset.postId;
+        const isCurrentlyBookmarked = bookmarkBtn.dataset.bookmarked === 'true';
+        const newBookmarkState = !isCurrentlyBookmarked;
+
+        // Optimistic Update
+        bookmarkBtn.dataset.bookmarked = newBookmarkState.toString();
+        bookmarkTextEl.textContent = newBookmarkState ? 'Saved' : 'Save';
+        bookmarkBtn.className = newBookmarkState
+            ? "inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer touch-manipulation border-indigo-200 bg-indigo-50 text-indigo-600"
+            : "inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer touch-manipulation border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100";
+        bookmarkIcon.className = newBookmarkState
+            ? "w-4 h-4 transition-transform duration-150 fill-indigo-600 text-indigo-600 scale-110"
+            : "w-4 h-4 transition-transform duration-150 fill-none stroke-currentColor";
+
+        try {
+            const response = await fetch(`/post/${postId}/bookmark/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.is_bookmarked !== undefined) {
+                    bookmarkBtn.dataset.bookmarked = data.is_bookmarked.toString();
+                    bookmarkTextEl.textContent = data.is_bookmarked ? 'Saved' : 'Save';
+                }
+            } else {
+                throw new Error('Server request failed');
+            }
+        } catch (error) {
+            // Rollback
+            bookmarkBtn.dataset.bookmarked = isCurrentlyBookmarked.toString();
+            bookmarkTextEl.textContent = isCurrentlyBookmarked ? 'Saved' : 'Save';
+            console.error('Bookmark toggle failed:', error);
+        }
+    }
+</script>
+{% endblock extra_js %}

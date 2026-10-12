@@ -1,0 +1,177 @@
+{% extends 'shared/layout.html' %}
+
+{% block title %}
+My Profile - DevBlog
+{% endblock title %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        
+        <!-- Header Banner -->
+        <div class="h-32 bg-linear-to-r from-indigo-500 to-purple-600"></div>
+
+        <!-- Profile Body -->
+        <div class="p-6 sm:p-8 -mt-16">
+            
+            <!-- Global Form Errors -->
+            {% if u_form.errors or p_form.errors %}
+                <div class="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-xs sm:text-sm text-red-700 space-y-1">
+                    <p class="font-semibold">Please correct the errors below:</p>
+                    {% for field in u_form %}
+                        {% for error in field.errors %}
+                            <p>• {{ field.label }}: {{ error }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for field in p_form %}
+                        {% for error in field.errors %}
+                            <p>• {{ field.label }}: {{ error }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>
+                {% csrf_token %}
+
+                <!-- Top Profile Details Header -->
+                <div class="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 pb-6 border-b border-slate-200">
+                    <div class="relative shrink-0">
+                        {% if user.profile.avatar %}
+                            <img src="{{ user.profile.avatar.url }}" alt="{{ user.username }}" class="w-28 h-28 rounded-full object-cover border-4 border-white shadow-md bg-white">
+                        {% else %}
+                            <div class="w-28 h-28 rounded-full border-4 border-white shadow-md bg-indigo-100 flex items-center justify-center text-indigo-600 text-3xl font-bold">
+                                {{ user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="text-center sm:text-left space-y-1">
+                        <h1 class="text-2xl font-bold text-slate-900">{{ user.username }}</h1>
+                        <p class="text-xs text-slate-500">Member since {{ user.date_joined|date:"M Y" }}</p>
+                    </div>
+                </div>
+
+                <!-- Form Fields Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                    
+                    <!-- Username -->
+                    <div>
+                        <label for="{{ u_form.username.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Username
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ u_form.username.name }}" 
+                            id="{{ u_form.username.id_for_label }}"
+                            value="{{ u_form.username.value|default:'' }}" 
+                            required 
+                            class="w-full rounded-lg border {% if u_form.username.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-2.5 text-sm shadow-sm transition"
+                        >
+                        {% if u_form.username.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-medium">{{ u_form.username.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="{{ u_form.email.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Email Address
+                        </label>
+                        <input 
+                            type="email" 
+                            name="{{ u_form.email.name }}" 
+                            id="{{ u_form.email.id_for_label }}"
+                            value="{{ u_form.email.value|default:'' }}" 
+                            required 
+                            class="w-full rounded-lg border {% if u_form.email.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-2.5 text-sm shadow-sm transition"
+                        >
+                        {% if u_form.email.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-medium">{{ u_form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Avatar Upload -->
+                    <div class="md:col-span-2">
+                        <label for="{{ p_form.avatar.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Profile Avatar
+                        </label>
+                        <input 
+                            type="file" 
+                            name="{{ p_form.avatar.name }}" 
+                            id="{{ p_form.avatar.id_for_label }}"
+                            accept="image/*" 
+                            class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-300 rounded-lg p-1 transition"
+                        >
+                        {% if p_form.avatar.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-medium">{{ p_form.avatar.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bio -->
+                    <div class="md:col-span-2">
+                        <label for="{{ p_form.bio.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Bio / About You
+                        </label>
+                        <textarea 
+                            name="{{ p_form.bio.name }}" 
+                            id="{{ p_form.bio.id_for_label }}"
+                            rows="4" 
+                            placeholder="Tell the community a little about yourself..."
+                            class="w-full rounded-lg border {% if p_form.bio.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-3 text-sm shadow-sm transition focus:outline-none"
+                        >{{ p_form.bio.value|default:'' }}</textarea>
+                        {% if p_form.bio.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-medium">{{ p_form.bio.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- GitHub Link -->
+                    <div>
+                        <label for="{{ p_form.github_link.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            GitHub Profile URL
+                        </label>
+                        <input 
+                            type="url" 
+                            name="{{ p_form.github_link.name }}" 
+                            id="{{ p_form.github_link.id_for_label }}"
+                            value="{{ p_form.github_link.value|default:'' }}" 
+                            placeholder="https://github.com/username"
+                            class="w-full rounded-lg border {% if p_form.github_link.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-2.5 text-sm shadow-sm transition"
+                        >
+                        {% if p_form.github_link.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-medium">{{ p_form.github_link.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Twitter Link -->
+                    <div>
+                        <label for="{{ p_form.twitter_link.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            X / Twitter URL
+                        </label>
+                        <input 
+                            type="url" 
+                            name="{{ p_form.twitter_link.name }}" 
+                            id="{{ p_form.twitter_link.id_for_label }}"
+                            value="{{ p_form.twitter_link.value|default:'' }}" 
+                            placeholder="https://x.com/username"
+                            class="w-full rounded-lg border {% if p_form.twitter_link.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-2.5 text-sm shadow-sm transition"
+                        >
+                        {% if p_form.twitter_link.errors %}
+                            <p class="mt-1 text-xs text-red-600 font-medium">{{ p_form.twitter_link.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                </div>
+
+                <!-- Action Button -->
+                <div class="pt-4 flex justify-end">
+                    <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-lg shadow-sm transition duration-150 active:scale-[0.99]">
+                        Save Changes
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock content %}

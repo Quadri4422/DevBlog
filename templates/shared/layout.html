@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/mainstyle.css' %}">
+    <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHeHhVlzWJZdBr3W105MtnIsNHhE2bS0FFU4T" crossorigin="anonymous"></script>
+    <style>[x-cloak] { display: none !important; }</style>
+    <title>
+        {% block title %}
+        DevBlog
+        {% endblock title %}
+    </title>
+</head>
+<body class="flex flex-col min-h-full font-sans text-slate-800 antialiased">
+
+    <!-- Modular Navigation -->
+    {% include 'shared/navbar.html' %}
+
+    <!-- Flash Messages -->
+    {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full mt-4">
+            {% for message in messages %}
+                <div class="p-4 mb-3 rounded-xl text-sm font-medium shadow-sm {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200{% else %}bg-emerald-50 text-emerald-800 border border-emerald-200{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content Body -->
+    <main class="grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        {% block content %}
+        {% endblock content %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-slate-500">
+            &copy; {% now "Y" %} DevBlog. Built with Django & Tailwind CSS.
+        </div>
+    </footer>
+
+</body>
+</html>

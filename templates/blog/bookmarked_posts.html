@@ -1,0 +1,204 @@
+{% extends 'shared/layout.html' %}
+{% load static %}
+
+{% block title %}
+Saved Posts - DevBlog
+{% endblock title %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Header Section -->
+    <div class="border-b border-slate-200 pb-4 flex items-center justify-between flex-wrap gap-2">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Your Bookmarks</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">Articles you have saved for later reading.</p>
+        </div>
+        <span id="bookmark-count-badge" class="{% if not posts %}hidden{% endif %} text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full">
+            <span id="bookmark-count-number">{{ posts|length }}</span> saved
+        </span>
+    </div>
+
+    <!-- Bookmarked Articles Grid -->
+    <div id="bookmarks-grid" class="grid gap-6 sm:grid-cols-2" data-post-list-url="{% url 'post_list' %}">
+        {% for post in posts %}
+            <article id="bookmark-card-{{ post.slug }}" class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition duration-300 group">
+                <div class="space-y-3">
+                    <!-- Top Meta Info -->
+                    <div class="flex items-center justify-between gap-2">
+                        {% if post.category %}
+                            <a href="{% url 'category_detail' post.category.slug %}" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-0.5 rounded-md transition">
+                                {{ post.category.name }}
+                            </a>
+                        {% else %}
+                            <span></span>
+                        {% endif %}
+
+                        <span class="text-[11px] text-slate-400 font-medium">
+                            {% if post.get_read_time %}{{ post.get_read_time }}{% else %}3{% endif %} min read
+                        </span>
+                    </div>
+
+                    <!-- Post Thumbnail (If Available) -->
+                    {% if post.featured_image %}
+                        <div class="w-full h-36 overflow-hidden rounded-lg border border-slate-100">
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy">
+                        </div>
+                    {% endif %}
+
+                    <!-- Post Title & Excerpt -->
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900 leading-snug group-hover:text-indigo-600 transition">
+                            <a href="{% url 'post_detail' post.slug %}">
+                                {{ post.title }}
+                            </a>
+                        </h2>
+                        <p class="text-xs sm:text-sm text-slate-600 mt-1.5 line-clamp-2 leading-relaxed">
+                            {{ post.content|striptags|truncatewords:20 }}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Bottom Meta & AJAX Form -->
+                <div class="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs">
+                    <!-- Author & Date Info -->
+                    <div class="flex items-center space-x-2 text-slate-500">
+                        {% if post.author.profile.avatar %}
+                            <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }}" class="w-5 h-5 rounded-full object-cover">
+                        {% else %}
+                            <div class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-[10px]">
+                                {{ post.author.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        <span class="truncate max-w-25 sm:max-w-30 font-medium text-slate-700">{{ post.author.username }}</span>
+                        <span>&bull;</span>
+                        <span class="text-slate-400">{{ post.created_at|date:"M d, Y" }}</span>
+                    </div>
+
+                    <!-- Bookmark Removal Form -->
+                    <form action="{% url 'toggle_bookmark' post.slug %}" method="POST" class="shrink-0 bookmark-form" data-slug="{{ post.slug }}">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                title="Remove bookmark"
+                                aria-label="Remove bookmark"
+                                class="inline-flex items-center space-x-1 text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition border border-transparent hover:border-red-100 cursor-pointer disabled:opacity-50">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span class="text-xs">Remove</span>
+                        </button>
+                    </form>
+                </div>
+            </article>
+        {% empty %}
+            <!-- Empty State Container -->
+            <div id="empty-state" class="sm:col-span-2 text-center py-12 px-4 bg-white rounded-xl border border-dashed border-slate-200">
+                <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                </div>
+                <h3 class="text-base font-semibold text-slate-900">No saved posts yet</h3>
+                <p class="text-slate-500 text-xs sm:text-sm mt-1 max-w-sm mx-auto">
+                    Click the bookmark icon on any blog post to save articles here for quick access later.
+                </p>
+                <a href="{% url 'post_list' %}" class="inline-flex items-center space-x-1 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition shadow-sm">
+                    <span>Browse Articles</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- JavaScript Fetch Handler -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const gridContainer = document.getElementById('bookmarks-grid');
+    const badgeContainer = document.getElementById('bookmark-count-badge');
+    const countNumber = document.getElementById('bookmark-count-number');
+    const postListUrl = gridContainer ? gridContainer.dataset.postListUrl : '#';
+
+    gridContainer.addEventListener('submit', async (e) => {
+        const form = e.target.closest('.bookmark-form');
+        if (!form) return;
+
+        e.preventDefault();
+
+        const actionUrl = form.action;
+        const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+        const slug = form.dataset.slug;
+        const cardElement = document.getElementById(`bookmark-card-${slug}`);
+        const submitButton = form.querySelector('button');
+
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch(actionUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) throw new Error('Network response failed');
+
+            const data = await response.json();
+
+            if (data.status === 'success' && !data.bookmarked) {
+                cardElement.style.transition = 'all 0.3s ease-out';
+                cardElement.style.opacity = '0';
+                cardElement.style.transform = 'scale(0.95)';
+
+                setTimeout(() => {
+                    cardElement.remove();
+
+                    const remainingCards = gridContainer.querySelectorAll('article').length;
+                    
+                    if (countNumber) {
+                        countNumber.textContent = remainingCards;
+                    }
+
+                    if (remainingCards === 0) {
+                        if (badgeContainer) badgeContainer.classList.add('hidden');
+                        
+                        gridContainer.innerHTML = `
+                            <div id="empty-state" class="sm:col-span-2 text-center py-12 px-4 bg-white rounded-xl border border-dashed border-slate-200 opacity-0 transition duration-300">
+                                <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                    </svg>
+                                </div>
+                                <h3 class="text-base font-semibold text-slate-900">No saved posts yet</h3>
+                                <p class="text-slate-500 text-xs sm:text-sm mt-1 max-w-sm mx-auto">
+                                    Click the bookmark icon on any blog post to save articles here for quick access later.
+                                </p>
+                                <a href="${postListUrl}" class="inline-flex items-center space-x-1 mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition shadow-sm">
+                                    <span>Browse Articles</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                    </svg>
+                                </a>
+                            </div>
+                        `;
+                        
+                        setTimeout(() => {
+                            const emptyState = document.getElementById('empty-state');
+                            if (emptyState) emptyState.classList.remove('opacity-0');
+                        }, 50);
+                    }
+                }, 300);
+            } else {
+                submitButton.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error removing bookmark:', error);
+            submitButton.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock content %}

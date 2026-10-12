@@ -1,0 +1,347 @@
+{% extends 'shared/layout.html' %}
+
+{% block title %}
+Explore Articles - DevBlog
+{% endblock title %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Hero Header & Search Section -->
+    <div class="text-center max-w-2xl mx-auto space-y-4">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            Discover Tech Insights & Articles
+        </h1>
+        <p class="text-slate-600 text-sm sm:text-base">
+            Explore stories, guides, and tutorials from creators around the world.
+        </p>
+
+        <!-- Search Bar -->
+        <form method="GET" action="{% url 'home' %}" class="relative max-w-lg mx-auto mt-4">
+            {% if selected_category %}
+                <input type="hidden" name="category" value="{{ selected_category }}">
+            {% endif %}
+            <div class="relative flex items-center">
+                <input 
+                    type="text" 
+                    name="q" 
+                    value="{{ query }}" 
+                    placeholder="Search articles by title or keyword..." 
+                    class="w-full pl-10 pr-28 py-3 rounded-xl border border-slate-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                >
+                <div class="absolute left-3 text-slate-400 pointer-events-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <button type="submit" class="absolute right-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition duration-150">
+                    Search
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Feed List -->
+    {% if page_obj %}
+        <div class="space-y-6">
+            {% for post in page_obj %}
+                <article class="bg-white rounded-2xl border border-slate-200 shadow-sm relative transition hover:shadow-md">
+                    
+                    <!-- Card Header -->
+                    <div class="p-4 sm:p-5 flex items-center justify-between border-b border-slate-100">
+                        <div class="flex items-center space-x-3">
+                            {% if post.author.profile.avatar %}
+                                <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.username }}" class="w-10 h-10 rounded-full object-cover border border-slate-200">
+                            {% else %}
+                                <div class="w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm uppercase">
+                                    {{ post.author.username|slice:":2" }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <span class="font-bold text-slate-900 text-sm block">{{ post.author.get_full_name|default:post.author.username }}</span>
+                                <p class="text-xs text-slate-400">{{ post.created_at|date:"M d, Y • h:i A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Featured Image -->
+                    {% if post.featured_image %}
+                        <div class="w-full max-h-96 overflow-hidden bg-slate-100 border-b border-slate-100">
+                            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="w-full h-full object-cover">
+                        </div>
+                    {% elif post.image %}
+                        <div class="w-full max-h-96 overflow-hidden bg-slate-100 border-b border-slate-100">
+                            <img src="{{ post.image.url }}" alt="{{ post.title }}" class="w-full h-full object-cover">
+                        </div>
+                    {% endif %}
+
+                    <!-- Card Body -->
+                    <div class="p-4 sm:p-5 space-y-3">
+                        <h2 class="text-lg sm:text-xl font-bold text-slate-900 hover:text-indigo-600 transition">
+                            <a href="{% url 'post_detail' post.slug %}">{{ post.title }}</a>
+                        </h2>
+                        <p class="text-slate-600 text-sm leading-relaxed">
+                            {{ post.content|striptags|truncatewords:40 }}
+                            <a href="{% url 'post_detail' post.slug %}" class="text-indigo-600 font-semibold hover:underline inline-flex items-center ml-1">
+                                Read more &rarr;
+                            </a>
+                        </p>
+                    </div>
+
+                    <!-- Interaction Counters Bar -->
+                    <div class="px-4 py-2 bg-slate-50 border-t border-b border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                        <span id="reaction-count-{{ post.id }}">
+                            {{ post.total_reactions|default:0 }} Reactions
+                        </span>
+                        <div class="space-x-3">
+                            <button type="button" onclick="toggleCommentSection('{{ post.id }}')" class="hover:underline hover:text-indigo-600 focus:outline-none">
+                                {{ post.comments.count|default:0 }} Comments
+                            </button>
+                            <span id="bookmark-count-{{ post.id }}">{{ post.bookmarks.count|default:0 }} Bookmarks</span>
+                        </div>
+                    </div>
+
+                    <!-- Feed Action Buttons -->
+                    <div class="px-2 sm:px-4 py-1.5 grid grid-cols-3 gap-1 text-center border-b border-slate-100 text-sm font-semibold text-slate-600 relative">
+                        {% if user.is_authenticated %}
+                            
+                            <!-- Reaction Container with 3-Second Hover JS -->
+                            <div class="relative" onmouseenter="showReactions('{{ post.id }}')" onmouseleave="hideReactions('{{ post.id }}')">
+                                
+                                <!-- Emoji Picker Popup -->
+                                <div id="reaction-popup-{{ post.id }}" class="absolute bottom-full left-4 sm:left-6 mb-2 hidden items-center space-x-2 bg-white px-3 py-2 rounded-full shadow-xl border border-slate-200 z-30 transition-opacity duration-200">
+                                    <button data-post-id="{{ post.id }}" data-reaction="LIKE" onclick="triggerReaction(this)" class="hover:scale-125 transition text-xl" title="Like">👍</button>
+                                    <button data-post-id="{{ post.id }}" data-reaction="LOVE" onclick="triggerReaction(this)" class="hover:scale-125 transition text-xl" title="Love">❤️</button>
+                                    <button data-post-id="{{ post.id }}" data-reaction="LAUGH" onclick="triggerReaction(this)" class="hover:scale-125 transition text-xl" title="Laugh">😂</button>
+                                    <button data-post-id="{{ post.id }}" data-reaction="ANGRY" onclick="triggerReaction(this)" class="hover:scale-125 transition text-xl" title="Angry">😡</button>
+                                </div>
+
+                                <!-- Dynamic Main React Button -->
+                                <button data-post-id="{{ post.id }}" data-reaction="LIKE" onclick="triggerReaction(this)" class="w-full py-2 flex items-center justify-center space-x-2 hover:bg-slate-50 rounded-lg transition text-slate-600 hover:text-indigo-600">
+                                    <span id="react-btn-icon-{{ post.id }}" class="text-lg">
+                                        {% if post.user_reaction == 'LIKE' %}👍
+                                        {% elif post.user_reaction == 'LOVE' %}❤️
+                                        {% elif post.user_reaction == 'LAUGH' %}😂
+                                        {% elif post.user_reaction == 'ANGRY' %}😡
+                                        {% else %}
+                                        <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </span>
+                                    <span id="react-btn-text-{{ post.id }}">
+                                        {% if post.user_reaction %}{{ post.user_reaction|title }}{% else %}React{% endif %}
+                                    </span>
+                                </button>
+                            </div>
+
+                            <button onclick="toggleCommentSection('{{ post.id }}')" class="py-2 flex items-center justify-center space-x-2 hover:bg-slate-50 rounded-lg transition hover:text-indigo-600">
+                                💬 <span>Comment</span>
+                            </button>
+                            <button onclick="handleDashboardBookmark('{{ post.id }}')" class="py-2 flex items-center justify-center space-x-2 hover:bg-slate-50 rounded-lg transition hover:text-indigo-600">
+                                🔖 <span id="bookmark-text-{{ post.id }}">Bookmark</span>
+                            </button>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="py-2 flex justify-center space-x-2 hover:bg-slate-50 rounded-lg">👍 <span>React</span></a>
+                            <a href="{% url 'login' %}" class="py-2 flex justify-center space-x-2 hover:bg-slate-50 rounded-lg">💬 <span>Comment</span></a>
+                            <a href="{% url 'login' %}" class="py-2 flex justify-center space-x-2 hover:bg-slate-50 rounded-lg">🔖 <span>Bookmark</span></a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Collapsible Comment Drawer -->
+                    <div id="comment-drawer-{{ post.id }}" class="hidden bg-slate-50 p-4 border-t border-slate-100 rounded-b-2xl space-y-4">
+                        {% if user.is_authenticated %}
+                            <form action="{% url 'add_comment' post.id %}" method="POST" class="flex gap-2">
+                                {% csrf_token %}
+                                <input type="text" name="content" required placeholder="Write a comment..." class="flex-1 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 px-4 py-2 border bg-white">
+                                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-indigo-500">Post</button>
+                            </form>
+                        {% endif %}
+
+                        <div class="space-y-4 max-h-96 overflow-y-auto pt-2">
+                            {% for comment in post.comments.all %}
+                                {% if not comment.parent %}
+                                    <!-- Parent Comment -->
+                                    <div class="space-y-2">
+                                        <div class="bg-white p-3 rounded-xl border border-slate-200 text-sm shadow-sm">
+                                            <div class="flex justify-between items-center font-bold text-slate-800 text-xs mb-1">
+                                                <span>{{ comment.author.username }}</span>
+                                                <span class="text-slate-400 font-normal">{{ comment.created_at|timesince }} ago</span>
+                                            </div>
+                                            
+                                            <!-- Comment Display -->
+                                            <p id="comment-text-{{ comment.id }}" class="text-slate-600">{{ comment.content }}</p>
+
+                                            <!-- Edit Comment Form (Hidden initially) -->
+                                           <form id="edit-form-{{ comment.id }}" action="/comment/{{ comment.id }}/edit/" method="POST" class="hidden mt-2 flex gap-2">
+                                                {% csrf_token %}
+                                                <input type="text" name="content" value="{{ comment.content }}" class="flex-1 rounded-md border-slate-200 text-xs px-2 py-1 border bg-white">
+                                                <button type="submit" class="bg-emerald-500 text-white px-2 py-1 rounded-md text-xs font-semibold">Save</button>
+                                                <button type="button" onclick="toggleEdit('{{ comment.id }}')" class="bg-slate-200 text-slate-600 px-2 py-1 rounded-md text-xs">Cancel</button>
+                                            </form>
+
+                                            <!-- Comment Action Links -->
+                                            <div class="flex items-center gap-3 mt-2 text-xs font-semibold text-slate-500">
+                                                <button onclick="toggleReply('{{ comment.id }}')" class="hover:text-indigo-600">Reply</button>
+                                                
+                                                <!-- Edit & Delete (Only if user owns comment) -->
+                                                {% if comment.author == user %}
+                                                    <button onclick="toggleEdit('{{ comment.id }}')" class="hover:text-amber-600">Edit</button>
+                                                    <form action="{% url 'delete_comment' comment.id %}" method="POST" class="inline" onsubmit="return confirm('Delete this comment?');">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="hover:text-red-600">Delete</button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Hidden Reply Form -->
+                                        <div id="reply-form-{{ comment.id }}" class="hidden ml-8">
+                                            <form action="{% url 'add_comment' post.id %}" method="POST" class="flex gap-2">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                                <input type="text" name="content" required placeholder="Write a reply..." class="flex-1 rounded-xl border-slate-200 text-xs px-3 py-1.5 border bg-white">
+                                                <button type="submit" class="bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-semibold">Reply</button>
+                                            </form>
+                                        </div>
+
+                                        <!-- Nested Replies Loop -->
+                                        <div class="ml-8 space-y-2">
+                                            {% for reply in comment.replies.all %}
+                                                <div class="bg-slate-100/70 p-3 rounded-xl border border-slate-200 text-sm shadow-sm">
+                                                    <div class="flex justify-between items-center font-bold text-slate-800 text-xs mb-1">
+                                                        <span>{{ reply.author.username }}</span>
+                                                        <span class="text-slate-400 font-normal">{{ reply.created_at|timesince }} ago</span>
+                                                    </div>
+                                                    
+                                                    <p id="comment-text-{{ reply.id }}" class="text-slate-600">{{ reply.content }}</p>
+
+                                                    <form id="edit-form-{{ reply.id }}" action="{% url 'edit_comment' reply.id %}" method="POST" class="hidden mt-2 flex gap-2">
+                                                        {% csrf_token %}
+                                                        <input type="text" name="content" value="{{ reply.content }}" class="flex-1 rounded-md border-slate-200 text-xs px-2 py-1 border bg-white">
+                                                        <button type="submit" class="bg-emerald-500 text-white px-2 py-1 rounded-md text-xs font-semibold">Save</button>
+                                                        <button type="button" onclick="toggleEdit('{{ reply.id }}')" class="bg-slate-200 text-slate-600 px-2 py-1 rounded-md text-xs">Cancel</button>
+                                                    </form>
+
+                                                    {% if reply.author == user %}
+                                                    <div class="flex items-center gap-3 mt-2 text-xs font-semibold text-slate-500">
+                                                        <button onclick="toggleEdit('{{ reply.id }}')" class="hover:text-amber-600">Edit</button>
+                                                        <form action="{% url 'delete_comment' reply.id %}" method="POST" class="inline" onsubmit="return confirm('Delete this reply?');">
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="hover:text-red-600">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Scripts for Delay, Emojis, and Comment Forms -->
+<script>
+    function getCSRFToken() {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 10) === ('csrftoken=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Reaction Display Dictionary
+    const emojiMap = {
+        'LIKE': { icon: '👍', text: 'Like' },
+        'LOVE': { icon: '❤️', text: 'Love' },
+        'LAUGH': { icon: '😂', text: 'Laugh' },
+        'ANGRY': { icon: '😡', text: 'Angry' }
+    };
+
+    // 3-Second Hover Logic
+    const reactionTimers = {};
+
+    function showReactions(postId) {
+        clearTimeout(reactionTimers[postId]);
+        const popup = document.getElementById(`reaction-popup-${postId}`);
+        popup.classList.remove('hidden');
+        popup.classList.add('flex');
+    }
+
+    function hideReactions(postId) {
+        reactionTimers[postId] = setTimeout(() => {
+            const popup = document.getElementById(`reaction-popup-${postId}`);
+            popup.classList.remove('flex');
+            popup.classList.add('hidden');
+        }, 3000);
+    }
+
+    // Handle AJAX Reaction Click & Visual Update
+    function triggerReaction(button) {
+        const postId = button.getAttribute('data-post-id');
+        const reactionType = button.getAttribute('data-reaction');
+        
+        fetch(`/post/${postId}/react/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ reaction_type: reactionType })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById(`react-btn-icon-${postId}`).innerText = emojiMap[reactionType].icon;
+                document.getElementById(`react-btn-text-${postId}`).innerText = emojiMap[reactionType].text;
+                document.getElementById(`reaction-count-${postId}`).innerText = `${data.total_reactions} Reactions`;
+                hideReactions(postId);
+            }
+        });
+    }
+
+    // UI Toggles for Comments
+    function toggleCommentSection(postId) {
+        document.getElementById(`comment-drawer-${postId}`).classList.toggle('hidden');
+    }
+
+    function toggleReply(commentId) {
+        document.getElementById(`reply-form-${commentId}`).classList.toggle('hidden');
+    }
+
+    function toggleEdit(commentId) {
+        document.getElementById(`comment-text-${commentId}`).classList.toggle('hidden');
+        document.getElementById(`edit-form-${commentId}`).classList.toggle('hidden');
+    }
+
+    function handleDashboardBookmark(postId) {
+        fetch(`/post/${postId}/bookmark/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById(`bookmark-count-${postId}`).innerText = `${data.total_bookmarks} Bookmarks`;
+            }
+        });
+    }
+</script>
+{% endblock content %}

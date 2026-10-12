@@ -1,0 +1,83 @@
+{% extends 'shared/layout.html' %}
+
+{% block title %}
+Login - DevBlog
+{% endblock title %}
+
+{% block content %}
+<div class="max-w-md mx-auto my-6 sm:my-12 px-4 sm:px-0">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1.5">Enter your credentials to access your account.</p>
+        </div>
+
+        <!-- Non-Field Errors (e.g., Invalid username/password combination) -->
+        {% if form.non_field_errors %}
+            <div class="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm rounded-lg space-y-1">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="space-y-4" novalidate>
+            {% csrf_token %}
+
+            <!-- Username Field -->
+            <div>
+                <label for="{{ form.username.id_for_label|default:'id_username' }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Username
+                </label>
+                <input 
+                    type="text" 
+                    name="username" 
+                    id="{{ form.username.id_for_label|default:'id_username' }}" 
+                    value="{{ form.username.value|default:'' }}"
+                    required 
+                    autofocus
+                    placeholder="Enter your username"
+                    class="w-full rounded-lg border {% if form.username.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-2.5 text-sm shadow-sm transition focus:outline-none"
+                >
+                {% if form.username.errors %}
+                    <p class="mt-1 text-xs text-red-600 font-medium">{{ form.username.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Password Field -->
+            <div>
+                <label for="{{ form.password.id_for_label|default:'id_password' }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Password
+                </label>
+                <input 
+                    type="password" 
+                    name="password" 
+                    id="{{ form.password.id_for_label|default:'id_password' }}" 
+                    required
+                    placeholder="••••••••"
+                    class="w-full rounded-lg border {% if form.password.errors %}border-red-500 focus:ring-red-500{% else %}border-slate-300 focus:ring-indigo-500 focus:border-indigo-500{% endif %} p-2.5 text-sm shadow-sm transition focus:outline-none"
+                >
+                {% if form.password.errors %}
+                    <p class="mt-1 text-xs text-red-600 font-medium">{{ form.password.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-sm transition duration-150 shadow-sm active:scale-[0.99] mt-2">
+                Sign In
+            </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="text-center mt-6 pt-4 border-t border-slate-100">
+            <p class="text-xs sm:text-sm text-slate-500">
+                Don't have an account yet? 
+                <a href="{% url 'register' %}" class="text-indigo-600 font-semibold hover:underline">Register here</a>
+            </p>
+        </div>
+
+    </div>
+</div>
+{% endblock content %}
