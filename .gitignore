@@ -1,0 +1,26 @@
+# Python / Django
+*.pyc
+__pycache__/
+*.sqlite3
+db.sqlite3-journal
+
+# Virtual Environment
+env/
+venv/
+ENV/
+
+# Environment variables / Secrets
+.env
+
+# Media files (User-uploaded blog images, profile pics, documents)
+media/
+
+# Node modules (if using frontend packages)
+node_modules/
+
+# VS Code editor settings
+.vscode/
+
+# Operating System files
+.DS_Store
+Thumbs.db
