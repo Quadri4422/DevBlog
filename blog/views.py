@@ -222,9 +222,8 @@ def register_view(request):
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
-            user.save()
+            # CORREÇÃO: Usar form.save() lida corretamente com a criptografia de senha sem causar KeyError
+            form.save()
             messages.success(request, "Registration successful. Please log in.")
             return redirect('login')
     else:
@@ -368,5 +367,3 @@ def profile_edit_view(request):
         'p_form': p_form,
     }
     return render(request, 'blog/profile.html', context)
-
-    
